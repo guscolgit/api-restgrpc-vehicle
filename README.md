@@ -1,8 +1,12 @@
 Rest Api and gRPC Api for vehicle's location registers
 
-This Api was compiled in Debian GNU/Linux using CMake and gcc
+This Api was compiled in Debian GNU/Linux using CMake and gcc, using CppRest SDK (Casablanca) for the Rest Api, gRPC library for de gRPC APi and Google Test C++ for unit test grpc.
 
-Compile using de bash script ./compile from the directory Api-restgrpc-vehicle
+Compile using de bash script 
+	
+	./compile.sh 
+
+from the directory Api-restgrpc-vehicle
 
 To run the servers use the command
 
