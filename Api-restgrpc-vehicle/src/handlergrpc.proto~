@@ -1,0 +1,54 @@
+ 	syntax = "proto3";
+	
+	package handlergrpc;
+	
+	//import "google/api/annotations.proto";
+	
+	option java_package = "ex.grpc";
+	
+
+	// Defines the service
+	service HandlerGRPC {
+		// Function invoked to send the request
+		rpc sendRequestInsert (HandlerRequest) returns (HandlerReply) {
+			option (google.api.http) = { post: "/insert" body: "*" };
+		}
+		rpc sendRequestGetByID (HandlerRequest) returns (HandlerReplyGetByID) {
+			option (google.api.http) = { post: "/vehiclebyid" body: "*" };
+		}
+		rpc sendRequestLocation (HandlerRequest) returns (HandlerReply) {
+			option (google.api.http) = { post: "/location" body: "*" };
+		}
+		rpc sendRequestGetByArea (HandlerRequest) returns (HandlerReplyGetByArea) {
+			option (google.api.http) = { post: "/vehiclebyarea" body: "*" };
+		}
+		rpc sendRequestDelete (HandlerRequest) returns (HandlerReply) {
+			option (google.api.http) = { delete: "/" body: "*" };
+		}
+	}
+	
+	message Vehicle {
+		string vehicleid = 1;
+		double latitude = 2;
+		double longitude = 3;
+	}
+	
+	// The request message containing requested
+	message HandlerRequest {
+		Vehicle vehicle = 1;
+	}
+	
+	// The response message containing response
+	message HandlerReply {
+		string result = 1;
+	}
+	
+	message HandlerReplyGetByID {
+		Vehicle vehicle = 1;
+	}
+	
+	message HandlerReplyGetByArea {
+		
+	 repeated Vehicle vehicle = 1;
+		
+	}

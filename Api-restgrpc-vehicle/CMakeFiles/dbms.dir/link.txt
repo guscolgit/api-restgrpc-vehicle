@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -std=c++11   -shared -Wl,-soname,libdbms.so -o build/lib/libdbms.so CMakeFiles/dbms.dir/dbms/src/Dbms.cpp.o 

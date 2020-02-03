@@ -1,0 +1,311 @@
+#include <string>
+#include <iostream>
+#include <grpcpp/grpcpp.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include "../include/servergrpc.h"
+#include "../handlergrpc.grpc.pb.h"
+#include "../handlergrpc_mock.grpc.pb.h"
+
+#include <grpc/support/log.h>
+#include <grpc/support/time.h>
+#include <grpcpp/channel.h>
+#include <grpcpp/client_context.h>
+#include <grpcpp/create_channel.h>
+#include <grpcpp/server.h>
+#include <grpcpp/server_builder.h>
+#include <grpcpp/server_context.h>
+//#include <grpcpp/test/default_reactor_test_peer.h>
+
+using namespace std;
+using grpc::Server;
+using grpc::ServerBuilder;
+using grpc::ServerContext;
+using grpc::Channel;
+using grpc::ClientContext;
+using grpc::Status;
+
+using ::testing::AtLeast;
+using ::testing::DoAll;
+using ::testing::Invoke;
+using ::testing::Return;
+using ::testing::SaveArg;
+using ::testing::SetArgPointee;
+using ::testing::WithArg;
+using ::testing::_;
+
+using handlergrpc::HandlerGRPC;
+using handlergrpc::HandlerRequest;
+using handlergrpc::HandlerReply;
+using handlergrpc::HandlerReplyGetByID;
+using handlergrpc::HandlerReplyGetByArea;
+using handlergrpc::Vehicle;
+using handlergrpc::MockHandlerGRPCStub;
+
+class HandlerTestClient {
+    public:
+    
+        HandlerTestClient(HandlerGRPC::StubInterface* stub) : stub_(stub) {}
+
+	void DoInsert() {
+    ClientContext context;
+    HandlerRequest request;
+    Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+    vehicle->set_latitude(41.40338);
+    vehicle->set_longitude(2.17403);
+
+
+    HandlerReply reply;
+    Status s = stub_->sendRequestInsert(&context, request, &reply);
+    EXPECT_TRUE(s.ok());
+  }
+  
+  void DoFailInsert() {
+    ClientContext context;
+    HandlerRequest request;
+    Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+    vehicle->set_latitude(41.40338);
+    vehicle->set_longitude(2.17403);
+
+
+    HandlerReply reply;
+    Status s = stub_->sendRequestInsert(&context, request, &reply);
+    EXPECT_FALSE(s.ok());
+  }
+  
+  void DoGetByID() {
+    ClientContext context;
+    HandlerRequest request;
+    Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+    vehicle->set_latitude(41.40338);
+    vehicle->set_longitude(2.17403);
+
+
+    HandlerReplyGetByID reply;
+    Status s = stub_->sendRequestGetByID(&context, request, &reply);
+    EXPECT_TRUE(s.ok());
+  }
+  
+  void DoFailGetByID() {
+    ClientContext context;
+    HandlerRequest request;
+    Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string("b6f92146-1b7b-46be-85fa-67aa161ef2d4"));
+    vehicle->set_latitude(41.40338);
+    vehicle->set_longitude(2.17403);
+
+
+    HandlerReplyGetByID reply;
+    Status s = stub_->sendRequestGetByID(&context, request, &reply);
+    EXPECT_FALSE(s.ok());
+  }
+   void DoLocation() {
+    ClientContext context;
+    HandlerRequest request;
+	 Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+    vehicle->set_latitude(61.40338);
+    vehicle->set_longitude(21.17403);
+    
+    HandlerReply reply;
+    Status s = stub_->sendRequestLocation(&context, request, &reply);
+    EXPECT_TRUE(s.ok());
+  }
+  void DoGetByArea() {
+    ClientContext context;
+    HandlerRequest request;
+	 Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string(""));
+    vehicle->set_latitude(61.40338);
+    vehicle->set_longitude(21.17403);
+    
+    HandlerReplyGetByArea reply;
+    Status s = stub_->sendRequestGetByArea(&context, request, &reply);
+    EXPECT_TRUE(s.ok());
+  }
+  void DoDelete() {
+    ClientContext context;
+    HandlerRequest request;
+	 Vehicle* vehicle;
+	 vehicle = request.mutable_vehicle();
+    vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+    vehicle->set_latitude(0);
+    vehicle->set_longitude(0);
+    
+    HandlerReply reply;
+    Status s = stub_->sendRequestDelete(&context, request, &reply);
+    EXPECT_TRUE(s.ok());
+  }
+  
+  
+
+	void ResetStub(HandlerGRPC::StubInterface* stub) { stub_ = stub; }
+    private:
+    	HandlerGRPC::StubInterface* stub_;
+        //std::unique_ptr<HandlerGRPC::Stub> stub_;
+};
+
+
+class MockTest : public ::testing::Test {
+ protected:
+  MockTest() {}
+std::string address;
+  void SetUp() override {
+    address = "[::ffff:0000:0000]:34569";
+  }
+
+  void TearDown() override { /*grpcserver->Shutdown();*/ }
+  void ResetStub() {
+    std::shared_ptr<Channel> channel = grpc::CreateChannel(
+        address, grpc::InsecureChannelCredentials());
+    stub_ = HandlerGRPC::NewStub(channel);
+  }
+	
+  std::unique_ptr<HandlerGRPC::Stub> stub_;
+  std::unique_ptr<Server> grpcserver;
+  //TestServiceImpl service_;
+};
+
+TEST_F(MockTest, InsertRpc) {
+ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoInsert();
+  MockHandlerGRPCStub stub;
+  HandlerReply resp;
+  resp.set_result(std::string("Insert Successfully"));
+  EXPECT_CALL(stub, sendRequestInsert(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::OK)));
+  client.ResetStub(&stub);
+  client.DoInsert();
+}
+
+TEST_F(MockTest, GetByIDRpc) {
+ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoGetByID();
+  MockHandlerGRPCStub stub;
+  HandlerReplyGetByID resp;
+  Vehicle* vehicle;
+  vehicle = resp.mutable_vehicle();
+  vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+  vehicle->set_latitude(41.40338);
+  vehicle->set_longitude(2.17403);
+  EXPECT_CALL(stub, sendRequestGetByID(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::OK)));
+  client.ResetStub(&stub);
+  client.DoGetByID();
+}
+
+TEST_F(MockTest, InsertFailRpc) {
+ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoFailInsert();
+  MockHandlerGRPCStub stub;
+  HandlerReply resp;
+  resp.set_result(std::string("Insert has failed"));
+  EXPECT_CALL(stub, sendRequestInsert(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::CANCELLED)));
+  client.ResetStub(&stub);
+  client.DoFailInsert();
+}
+
+TEST_F(MockTest, GetByIDFailRpc) {
+  ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoFailGetByID();
+  MockHandlerGRPCStub stub;
+  HandlerReplyGetByID resp;
+  Vehicle* vehicle;
+  vehicle = resp.mutable_vehicle();
+  vehicle->set_vehicleid(std::string(""));
+  vehicle->set_latitude(0);
+  vehicle->set_longitude(0);
+  EXPECT_CALL(stub, sendRequestGetByID(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::CANCELLED)));
+  client.ResetStub(&stub);
+  client.DoFailGetByID();
+}
+
+TEST_F(MockTest, LocationRpc) {
+ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoLocation();
+  MockHandlerGRPCStub stub;
+  HandlerReply resp;
+  resp.set_result(std::string("Successfully Updated"));
+  EXPECT_CALL(stub, sendRequestLocation(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::OK)));
+  client.ResetStub(&stub);
+  client.DoLocation();
+}
+
+TEST_F(MockTest, GetByAreaRpc) {
+ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoGetByArea();
+  MockHandlerGRPCStub stub;
+  HandlerReplyGetByArea resp;
+  Vehicle *vehicle;
+  vehicle = resp.add_vehicle();
+  vehicle->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d4"));
+  vehicle->set_latitude(61.40338);
+  vehicle->set_longitude(21.17403);
+  Vehicle *vehicle2;
+  vehicle2 = resp.add_vehicle();
+  vehicle2->set_vehicleid(std::string("b6f92136-1b7b-46be-85fa-67aa161ef2d5"));
+  vehicle2->set_latitude(61.40338);
+  vehicle2->set_longitude(21.17403);
+
+  EXPECT_CALL(stub, sendRequestGetByArea(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::OK)));
+  client.ResetStub(&stub);
+  client.DoGetByArea();
+}
+
+TEST_F(MockTest, DeleteRpc) {
+ResetStub();
+  HandlerTestClient client(stub_.get());
+  client.DoDelete();
+  MockHandlerGRPCStub stub;
+  HandlerReply resp;
+  resp.set_result(std::string("Successfully Deleted"));
+  EXPECT_CALL(stub, sendRequestDelete(_, _, _))
+      .Times(AtLeast(1))
+      .WillOnce(DoAll(SetArgPointee<2>(resp), Return(Status::OK)));
+  client.ResetStub(&stub);
+  client.DoDelete();
+}
+
+void createdb()
+{
+	char *sql = "CREATE TABLE VEHICLE("  \
+      "ID STRING PRIMARY KEY     NOT NULL," \
+      "LATITUDE          REAL    NOT NULL," \
+      "LONGITUDE         REAL    NOT NULL);";
+    Dbms* d  = new Dbms();
+ 	 d->connect("");
+ 	 d->exec_query(sql,false,0);
+    d->disconnect();
+}
+int main(int argc, char** argv){
+
+  createdb();
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+
+}

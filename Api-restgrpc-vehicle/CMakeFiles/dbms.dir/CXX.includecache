@@ -1,0 +1,20 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/gustavo/Descargas/Api-restgrpc-vehicle/dbms/include/Dbms.h
+iostream
+-
+sqlite3.h
+-
+vector
+-
+
+/home/gustavo/Descargas/Api-restgrpc-vehicle/dbms/src/Dbms.cpp
+../include/Dbms.h
+/home/gustavo/Descargas/Api-restgrpc-vehicle/dbms/include/Dbms.h
+

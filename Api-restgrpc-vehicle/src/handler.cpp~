@@ -1,0 +1,317 @@
+#include "../include/handler.h"
+
+handler::handler()
+{
+    //ctor
+}
+handler::handler(utility::string_t url):m_listener(url)
+{
+    m_listener.support(methods::GET, std::bind(&handler::handle_get, this, std::placeholders::_1));
+    m_listener.support(methods::PUT, std::bind(&handler::handle_put, this, std::placeholders::_1));
+    m_listener.support(methods::POST, std::bind(&handler::handle_post, this, std::placeholders::_1));
+    m_listener.support(methods::DEL, std::bind(&handler::handle_delete, this, std::placeholders::_1));
+    m_listener.support(methods::OPTIONS, std::bind(&handler::handle_options, this, std::placeholders::_1));
+
+   /* char *sql = "CREATE TABLE VEHICLE("  \
+      "ID STRING PRIMARY KEY     NOT NULL," \
+      "LATITUDE          REAL    NOT NULL," \
+      "LONGITUDE         REAL    NOT NULL);";
+    Dbms* d  = new Dbms();
+ 	 d->connect("");
+ 	 d->exec_query(sql,false,0);
+    d->disconnect();*/
+
+}
+handler::~handler()
+{
+    //dtor
+}
+
+void handler::handle_error(pplx::task<void>& t)
+{
+    try
+    {
+        t.get();
+    }
+    catch(...)
+    {
+        // Ignore the error, Log it if a logger is available
+    }
+}
+
+void handler::handle_options(http_request request)
+{
+    http_response response(status_codes::OK);
+    response.headers().add(U("Allow"), U("GET, POST, PUT, DELETE, OPTIONS"));
+    response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+    response.headers().add(U("Access-Control-Allow-Methods"), U("GET, POST, PUT, DELETE, OPTIONS"));
+    response.headers().add(U("Access-Control-Allow-Headers"), U("Content-Type"));
+    request.reply(response);
+}
+//
+// Get Request 
+//
+void handler::handle_get(http_request message)
+{
+
+   ucout <<  message.to_string() << endl;
+	auto paths = http::uri::split_path(http::uri::decode(message.relative_uri().path()));
+
+   message.relative_uri().path();
+	message.extract_json().then([=](json::value mjsv)
+	{
+		try
+		{
+			message.reply(status_codes::OK,mjsv);
+		}
+		catch(...)
+		{
+			message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+		}
+	});    
+return;
+
+}
+
+//
+// A POST request
+//
+void handler::handle_post(http_request message)
+{
+	
+   ucout <<  message.to_string() << endl;
+	auto paths = http::uri::split_path(http::uri::decode(message.relative_uri().path()));
+
+   message.relative_uri().path();
+	message.extract_json().then([=](json::value mjsv)
+	{
+		try
+		{
+			char* sql;
+			std::string ssql;
+
+			for(auto & path : paths)
+			{
+				ucout<<path<<endl;
+				if(path==utility::conversions::to_string_t("insert"))
+				{
+					//ucout<< " Entro Insert" << endl;
+					ssql = "INSERT INTO VEHICLE (ID,LATITUDE,LONGITUDE) VALUES('";
+					ssql.append(mjsv["vehicleID"].as_string());
+					ssql.append(std::string("' , "));
+					ssql.append(std::to_string(mjsv["latitude"].as_double()));
+					ssql.append(std::string(","));
+					ssql.append(std::to_string(mjsv["longitude"].as_double()));
+					ssql.append(std::string("  ); "));
+					sql = new char[ssql.length()];
+					sql = (char*) ssql.c_str();		   
+					Dbms* d  = new Dbms();
+					if(d->connect(""))
+					{
+						if(d->exec_query(sql,false,0))
+						{
+							http_response response(status_codes::OK);
+							response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+							response.set_body(mjsv);
+							message.reply(response);	
+						}
+						else
+						{
+							message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+						}
+						d->disconnect();
+					}
+				}
+				if(path==utility::conversions::to_string_t("vehiclebyid"))
+			   {
+			   	//ucout<< " Entro By ID" << endl;
+					ssql = std::string("SELECT ID,LATITUDE,LONGITUDE FROM VEHICLE WHERE (ID='") + mjsv["vehicleID"].as_string() + std::string("');");
+					sql = new char[ssql.length()];
+					sql = (char*) ssql.c_str();		   
+					Dbms* d  = new Dbms();
+					if(d->connect(""))
+					{
+						std::vector<std::pair<std::string,std::string> > qdata;
+						if(d->exec_query(sql,true, &qdata))
+						{
+							json::value v0;
+						  	for (std::vector<std::pair<std::string,std::string>>::iterator it = qdata.begin() ; it != qdata.end(); it=it+3)
+							{
+							 			
+								v0["vehicleID"] = json::value::string((*it).second);
+								v0["latitude"] = json::value::number(std::stod((*(it+1)).second));
+								v0["longitude"] = json::value::number(std::stod((*(it+2)).second));
+							}
+	
+							http_response response(status_codes::OK);
+							response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+							response.set_body(v0);
+							message.reply(response);
+						}
+						else
+						{
+							message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+						}
+						d->disconnect();
+					}
+				}
+				if(path==utility::conversions::to_string_t("vehiclebyarea"))
+			   {
+					//ucout<< " Entro By AREA" << endl;
+									
+					ssql = std::string("SELECT ID,LATITUDE,LONGITUDE FROM VEHICLE WHERE (LATITUDE=") + std::to_string(mjsv["latitude"].as_double()) + std::string(" AND LONGITUDE=") + std::to_string(mjsv["longitude"].as_double()) + std::string(");");
+					sql = new char[ssql.length()];
+					sql = (char*) ssql.c_str();		   
+					Dbms* d  = new Dbms();
+					if(d->connect(""))
+					{
+						std::vector<std::pair<std::string,std::string> > qdata;
+					 	if(d->exec_query(sql,true, &qdata))
+					 	{
+							 		
+						  	json::value v0;
+						  	int cont=0;
+							for (std::vector<std::pair<std::string,std::string>>::iterator it = qdata.begin() ; it != qdata.end(); it=it+3)
+							{
+								v0["vehicles"][cont]["vehicleID"] = json::value::string((*it).second);
+								v0["vehicles"][cont]["latitude"] = json::value::number(std::stod((*(it+1)).second));
+								v0["vehicles"][cont]["longitude"] = json::value::number(std::stod((*(it+2)).second));
+								cont++;
+							}
+	
+							http_response response(status_codes::OK);
+							response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+							response.set_body(v0);
+							message.reply(response);
+						}
+						else
+						{
+							message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+						}
+						d->disconnect();
+					}
+				}
+			}
+	  	}
+		catch(...)
+		{
+			message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+		}
+	 });
+
+     
+    return ;
+}
+
+//
+// A DELETE request
+//
+void handler::handle_delete(http_request message)
+{
+   ucout <<  message.to_string() << endl;
+	auto path = http::uri::split_path(http::uri::decode(message.relative_uri().path()));
+
+   message.relative_uri().path();
+	message.extract_json().then([=](json::value mjsv)
+	{
+		try
+		{
+			char* sql;
+			std::string ssql;
+			//ucout<< " Entro DELETE" << endl;
+			ssql = "DELETE FROM VEHICLE WHERE ID = '"; 
+			ssql.append(mjsv["vehicleID"].as_string()); 
+			ssql.append(std::string("';"));
+			
+			sql = new char[ssql.length()];
+			sql = (char*) ssql.c_str(); 
+			Dbms* d  = new Dbms();
+			if(d->connect(""))
+			{
+				if(d->exec_query(sql,false,0))
+				{
+					//message.reply(status_codes::OK, mjsv);
+					http_response response(status_codes::OK);
+					response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+					response.set_body(mjsv);
+					message.reply(response);	
+				}
+				else
+				{
+					message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+				}
+				d->disconnect();
+			}
+		}
+		catch(...)
+		{
+			message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+		}
+	});
+		
+      
+    return;
+}
+
+
+//
+// A PUT request 
+//
+void handler::handle_put(http_request message)
+{
+	   ucout <<  message.to_string() << endl;
+	auto path = http::uri::split_path(http::uri::decode(message.relative_uri().path()));
+
+   message.relative_uri().path();
+	message.extract_json().then([=](json::value mjsv)
+	{
+		try
+		{
+			char* sql;
+			std::string ssql;
+			//ucout<< " Entro LOCATION" << endl;
+			ssql = "UPDATE VEHICLE set LATITUDE = ";
+			ssql.append(std::to_string(mjsv["latitude"].as_double())); 
+			ssql.append(std::string(", LONGITUDE=")); 
+			ssql.append(std::to_string(mjsv["longitude"].as_double())); 
+			ssql.append(std::string(" WHERE ID='")); 
+			ssql.append(mjsv["vehicleID"].as_string()); 
+			ssql.append(std::string("';"));
+		
+			sql = new char[ssql.length()];
+			sql = (char*) ssql.c_str(); 
+			Dbms* d  = new Dbms();
+			if(d->connect(""))
+			{
+				std::vector<std::pair<std::string,std::string> > qdata;
+			   if(d->exec_query(sql,true, &qdata))
+			   {
+			   	if(!qdata.empty())
+			   	{
+						http_response response(status_codes::OK);
+						response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+						response.set_body(U("Successfully Updated"));
+						message.reply(response);	
+					}
+					else
+			   	{
+			   		http_response response(status_codes::NoContent);
+						response.headers().add(U("Access-Control-Allow-Origin"), U("*"));
+						response.set_body(U("Zero rows Updated"));
+						message.reply(response);	
+					}
+				}
+				else
+				{
+					message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+				}
+				d->disconnect();
+			}
+		}
+		catch(...)
+		{
+			message.reply(status_codes::InternalError,U("INTERNAL ERROR "));
+		}
+	});
+    return;
+}
