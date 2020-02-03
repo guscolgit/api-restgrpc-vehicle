@@ -1,0 +1,4 @@
+sqlite3
+apt-utils
+cmake
+libcpprest-dev
