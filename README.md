@@ -29,3 +29,24 @@ To stop and remove the container
 	sudo docker container rm --force rg
 
 
+Server Rest listen in 0.0.0.0:34568 acepts requests methods POST, PUT and DELETE.
+
+	Inserts Vehicle at ==> 0.0.0.0:34568/insert method POST
+	Retrieve vehicle by ID at ==> 0.0.0.0:34568/vehiclebyid method POST
+	Update vehicle's location by ID at ==> 0.0.0.0:34568/ method PUT
+	Get a list of vehicles at a given location at ==> 0.0.0.0:34568/vehiclebyarea method POST
+	Delete a vehicle by ID at ==> 0.0.0.0:34568/ method DELETE
+
+Server gRPC listen in 0.0.0.0:34569 acepts requests gRPC ==> you have to create a cliente gRPC including the file handlergrpc.grpc.pb.h
+       
+	#include "path_to_file/handlergrpc.grpc.pb.h"
+
+And create request using the following fuctions
+
+	Inserts Vehicle at ==> function sendRequestInsert
+	Retrieve vehicle by ID at ==> function sendRequestGetByID
+	Update vehicle's location by ID at ==> function sendRequestLocation
+	Get a list of vehicles at a given location at ==> function sendRequestGetByArea
+	Delete a vehicle by ID at ==> function sendRequestDelete
+	
+A test client has been included in this repository
